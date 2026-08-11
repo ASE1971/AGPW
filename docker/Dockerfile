@@ -6,17 +6,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# kopiujemy folder api z AGPW
-COPY ../api ./api
+COPY api ./api
+COPY requirements.txt ./requirements.txt
 
-# kopiujemy requirements z AGPW
-COPY ../requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --upgrade pip
-
-# instalujemy uvicorn NORMALNIE
-RUN pip install uvicorn fastapi uv
-
-RUN uv pip install -r requirements.txt || true
-
-CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
