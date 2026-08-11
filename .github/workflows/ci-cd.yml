@@ -26,7 +26,8 @@ jobs:
           pip install pytest httpx
 
       - name: Run tests
-        run: pytest -q
+        run: |
+          pytest -q
 
   build-and-deploy:
     needs: test
