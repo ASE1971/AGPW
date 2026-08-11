@@ -4,14 +4,18 @@ import pathlib
 # Ensure workspace root is on sys.path for imports
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from data.db import connect_db
+from data.db import STOCKS_DAILY_UNIQUE_INDEX_SQL, connect_db
+
+DUPLICATE_GROUPS_SQL = (
+    "SELECT isin, date, COUNT(*) as c FROM stocks_daily GROUP BY isin, date HAVING c>1"
+)
 
 
 if __name__ == "__main__":
     conn = connect_db()
     cur = conn.cursor()
 
-    cur.execute("SELECT isin, date, COUNT(*) as c FROM stocks_daily GROUP BY isin, date HAVING c>1")
+    cur.execute(DUPLICATE_GROUPS_SQL)
     dups = cur.fetchall()
     print(f"Found duplicate groups: {len(dups)}")
     for r in dups[:50]:
@@ -23,14 +27,12 @@ if __name__ == "__main__":
             "DELETE FROM stocks_daily WHERE id NOT IN (SELECT MAX(id) FROM stocks_daily GROUP BY isin, date)"
         )
         conn.commit()
-        cur.execute("SELECT isin, date, COUNT(*) as c FROM stocks_daily GROUP BY isin, date HAVING c>1")
+        cur.execute(DUPLICATE_GROUPS_SQL)
         remaining = cur.fetchall()
         print(f"Remaining duplicate groups after cleanup: {len(remaining)}")
 
     try:
-        cur.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ux_stocks_daily_isin_date ON stocks_daily(isin, date);"
-        )
+        cur.execute(STOCKS_DAILY_UNIQUE_INDEX_SQL)
         conn.commit()
         print("Unique index created or already exists.")
     except Exception as e:

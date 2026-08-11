@@ -1,23 +1,8 @@
-import pandas as pd
-from pathlib import Path
-
 from agent.ingest.file_reader import read_excel_file
 
 
-def test_read_excel_file(tmp_path: Path):
-    file_path = tmp_path / "sample.xlsx"
-    df = pd.DataFrame(
-        {
-            "Ticker": ["AAA", "BBB"],
-            "ISIN": ["PLAAA0000001", "PLBBB0000002"],
-            "Date": ["2026-08-01", "2026-08-02"],
-            "Open": [100.0, 105.0],
-            "High": [110.0, 108.0],
-            "Low": [99.0, 103.0],
-            "Close": [108.0, 107.0],
-        }
-    )
-    df.to_excel(file_path, index=False)
+def test_read_excel_file(tmp_path, sample_stock_frame, write_excel):
+    file_path = write_excel(sample_stock_frame, tmp_path / "sample.xlsx")
 
     result = read_excel_file(file_path)
 

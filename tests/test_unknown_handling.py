@@ -1,33 +1,21 @@
 import shutil
 import pandas as pd
-from pathlib import Path
-import os
-from data import db
 from agent.ingest import file_router
 
 
-def test_unknown_moves_file(tmp_path, monkeypatch):
-    # Setup temp incoming dir
-    incoming = tmp_path / "incoming"
-    incoming.mkdir()
+def test_unknown_moves_file(incoming_dir, temp_db, write_excel):
     # create an xlsx with headers that should classify as UNKNOWN (e.g., 'Data','Nazwa',...)
     df = pd.DataFrame([[1, 'X', 'PLXXX', 'PLN']], columns=['Data', 'Nazwa', 'ISIN', 'Waluta'])
-    file_path = incoming / "unknown_sample.xlsx"
-    df.to_excel(file_path, index=False)
-
-    # Use temp DB
-    db_path = tmp_path / "agpw.db"
-    monkeypatch.setattr(db, 'DB_PATH', db_path)
-    db.initialize_database(db_path)
+    write_excel(df, incoming_dir / "unknown_sample.xlsx")
 
     # Run ingest_directory
-    file_router.ingest_directory(incoming)
+    file_router.ingest_directory(incoming_dir)
 
     # Expect file moved to incoming/unknown
-    unknown_dir = incoming / 'unknown'
+    unknown_dir = incoming_dir / 'unknown'
     assert unknown_dir.exists()
     moved = list(unknown_dir.glob('unknown_sample.*'))
     assert moved, 'Unknown file not moved'
 
     # Clean up
-    shutil.rmtree(str(incoming))
+    shutil.rmtree(str(incoming_dir))

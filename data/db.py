@@ -1,10 +1,14 @@
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Iterable
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "agpw.db"
+
+STOCKS_DAILY_UNIQUE_INDEX_SQL = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_stocks_daily_isin_date "
+    "ON stocks_daily(isin, date);"
+)
 
 CREATE_TABLES_SQL = [
     """
@@ -121,9 +125,7 @@ def create_tables(connection: sqlite3.Connection) -> None:
 
     # Try to create unique index on (isin, date). If duplicates exist, skip and log.
     try:
-        cursor.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ux_stocks_daily_isin_date ON stocks_daily(isin, date);"
-        )
+        cursor.execute(STOCKS_DAILY_UNIQUE_INDEX_SQL)
     except sqlite3.IntegrityError as e:
         logging.getLogger(__name__).warning(
             "Could not create unique index ux_stocks_daily_isin_date due to existing duplicates: %s", e

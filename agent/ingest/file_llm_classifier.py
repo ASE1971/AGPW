@@ -2,6 +2,8 @@ from pathlib import Path
 
 from typing import Literal
 
+from .columns import fold_polish
+
 FileType = Literal[
     "STOCK_DAILY",
     "INDEX_DAILY",
@@ -18,7 +20,7 @@ def classify_file(path: Path, df) -> FileType:
     This is a heuristic fallback implementation. In the future,
     replace this with a local LLM classifier.
     """
-    lower_cols = {str(col).strip().lower() for col in df.columns}
+    lower_cols = {fold_polish(col) for col in df.columns}
     if {"ticker", "open", "high", "low", "close"}.issubset(lower_cols):
         return "STOCK_DAILY"
     if {"index_name", "open", "high", "low", "close"}.issubset(lower_cols):
