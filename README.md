@@ -1,107 +1,117 @@
-# AGPW
+SKOPIUJ I WKLEJ — GOTOWY README.md
+Kod
+# AGPW – System Ingestu i API dla danych GPW
 
-AGPW to prosty projekt API napisany w FastAPI. Aplikacja udostępnia endpoint zdrowia oraz jest przygotowana do uruchamiania w kontenerze Docker i automatycznego wdrażania przez GitHub Actions.
+AGPW to projekt łączący ingest danych giełdowych z GPW, lokalną analizę, klasyfikację plików Excel oraz lekkie API oparte na FastAPI. System działa lokalnie (offline), wykorzystuje SQLite jako bazę danych, a ingest obsługuje różne typy plików Excel (akcje, indeksy, tickery, sektory). Projekt jest przygotowany do uruchamiania w Dockerze oraz posiada workflow CI/CD w GitHub Actions.
 
 ## Funkcje
-- prosty endpoint `/health`
-- obsługa Dockera
-- workflow CI/CD na GitHub Actions
-- testy automatyczne
+
+### API (FastAPI)
+- endpoint zdrowia `/health`
+- gotowa struktura pod przyszłe endpointy:
+  - `/api/chat`
+  - `/api/fetch/eod`
+  - `/api/score/{ticker}`
+
+### Ingest danych GPW
+- klasyfikacja plików Excel (LLM + heurystyki)
+- walidacja i mapowanie kolumn
+- zapis danych do SQLite (`data/agpw.db`)
+- przenoszenie plików UNKNOWN do `data/incoming/unknown/`
+- usuwanie plików po imporcie
+
+### CI/CD
+- testy automatyczne (pytest)
+- budowanie obrazu Dockera
+- publikacja obrazu do GitHub Container Registry
+- instalacja zależności (pandas, openpyxl, xlrd) przed testami
 
 ## Uruchamianie lokalne
 
 ### Wymagania
 - Python 3.11+
 - pip
- - pandas, openpyxl, xlrd (do odczytu plików Excel, instalowane przez `requirements.txt`)
+- zależności z `requirements.txt` (pandas, openpyxl, xlrd, FastAPI, Uvicorn)
 
 ### Instalacja
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### Uruchomienie aplikacji
-```bash
+Uruchomienie API
+bash
 uvicorn api.server:app --host 0.0.0.0 --port 8000
-```
-
-## Uruchamianie z Dockerem
-```bash
+Uruchamianie z Dockerem
+bash
 docker build -f docker/Dockerfile -t agpw .
 docker run -p 8000:8000 agpw
-```
+Ingest plików Excel
+Pliki wrzucane do data/incoming/ są automatycznie przetwarzane:
 
-## Ingest plików Excel (lokalnie)
+klasyfikacja typu pliku
 
-Pliki Excel wrzucane do katalogu `data/incoming` są przetwarzane przez skrypt ingest który:
-- klasyfikuje plik (akcje/indeksy/UNKNOWN),
-- mapuje i waliduje kolumny,
-- zapisuje dane do SQLite (`data/agpw.db`),
-- po sukcesie usuwa plik z folderu `incoming`, a `UNKNOWN` przenosi do `data/incoming/unknown/`.
+walidacja danych
 
-Uruchomienie:
-```bash
+zapis do SQLite
+
+przenoszenie plików UNKNOWN
+
+usuwanie plików po imporcie
+
+Uruchomienie ingestu:
+
+bash
 python -m agent.ingest.run_ingest -d data/incoming
-```
-
-## Testy
-```bash
+Testy
+bash
 pytest -q
-```
+Struktura projektu
+api/ — aplikacja FastAPI
 
-Uwaga: testy używają `pandas` i czytają przykładowe pliki Excel — upewnij się, że zainstalowano zależności z `requirements.txt`.
+agent/ingest/ — logika ingestu i klasyfikacji
 
-## CI/CD
-Projekt korzysta z GitHub Actions:
-- uruchamia testy przy każdym pushu i pull requestcie
-- buduje obraz Dockera
-- publikuje obraz do GitHub Container Registry
+data/ — baza SQLite + pliki wejściowe
 
-Ważne: workflow CI instaluje teraz `pandas`, `openpyxl` i `xlrd` przed uruchomieniem testów (zdefiniowane w `.github/workflows/ci-cd.yml`).
+docker/ — Dockerfile i konfiguracja
 
-## Struktura projektu
-- `api/` — kod aplikacji FastAPI
-- `docker/` — pliki Dockera
-- `tests/` — testy automatyczne
-- `.github/workflows/` — workflowy GitHub Actions
+tests/ — testy automatyczne
 
-## Rekomendacje dalszego rozwoju
-Projekt można rozwinąć w kierunku pełnego systemu analitycznego GPW:
+.github/workflows/ — CI/CD
 
-- dodać `data/db.py` i zdefiniować schemat SQLite z tabelami:
-  - `stocks_daily`, `indexes_daily`, `tickers`, `sectors`, `sector_companies`, `sector_index_map`
-- rozbudować moduł ingest w `agent/ingest/`:
-  - klasyfikacja plików Excel przez lokalny LLM
-  - walidacja danych i mapowanie kolumn
-  - zapis wyników do SQLite
-  - logowanie i obsługa błędów
-- wdrożyć pipeline multi-agentowy:
-  - ingest → validate → analyze → anomalies → scoring → report
-- dodać API w `api/routes/`:
-  - `/api/chat` — orchestrator
-  - `/api/fetch/eod` — pobranie danych
-  - `/api/score/{ticker}` — scoring
-- wzmocnić CI/CD:
-  - lint (ruff), type-check (mypy), testy (pytest), security scan (bandit)
-  - build Docker, push do registry, deploy/restart kontenerów
-- przygotować komplet testów:
-  - ingest, klasyfikator LLM, DB, pipeline, API
-- zadbać o bezpieczeństwo importu Excel:
-  - typ pliku, rozmiar, brak makr i ukrytych arkuszy
-  - walidacja typów i zakresów danych
+Rekomendacje dalszego rozwoju
+data/db.py – definicja tabel SQLite
 
-## Plan działania
-- [ ] `data/db.py` + definicja tabel SQLite
-- [ ] `agent/ingest/` + parser plików Excel
-- [ ] `agent/file_llm_classifier.py` + klasyfikacja LLM
-- [ ] `agent/worker.py` + pipeline multi-agentowy
-- [ ] `api/routes/` + endpointy `/api/chat`, `/api/fetch/eod`, `/api/score/{ticker}`
-- [ ] rozbudowa `docker-compose.yml` o `ollama`, `worker`, `db_volume`
-- [ ] `ci.yml` z lint, mypy, pytest, bandit
-- [ ] `cd.yml` z push do registry i deployem
-- [ ] testy jednostkowe i integracyjne dla ingest/pipeline/API
-- [ ] walidacja i zabezpieczenie importu Excel
+rozbudowa ingest (LLM, walidacja, logowanie)
 
-Te kroki pozwolą przekształcić projekt w system analityczny z pełnym ingestem, oceną i raportowaniem.
+pipeline multi-agentowy (ingest → validate → analyze → anomalies → scoring → report)
+
+nowe endpointy API (/api/chat, /api/fetch/eod, /api/score/{ticker})
+
+rozbudowa CI/CD (ruff, mypy, bandit, deploy)
+
+testy jednostkowe i integracyjne
+
+walidacja bezpieczeństwa importu Excel
+
+Plan działania
+[ ] data/db.py – schemat SQLite
+
+[ ] parser Excel w agent/ingest/
+
+[ ] klasyfikator LLM (file_llm_classifier.py)
+
+[ ] pipeline (agent/worker.py)
+
+[ ] endpointy API
+
+[ ] docker-compose z ollama + worker + db_volume
+
+[ ] CI (lint, mypy, pytest, bandit)
+
+[ ] CD (push do registry + deploy)
+
+[ ] testy ingest/pipeline/API
+
+[ ] walidacja importu Excel
+
+Repozytorium zostało oczyszczone po rewrite historii (13.08.2026). Pliki wykonywalne (*.exe) są ignorowane w .gitignore.
