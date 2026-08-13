@@ -1,44 +1,45 @@
-# Python cache
+# --- Python ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
 
-# Virtual environments
+# --- Virtual environment ---
 .venv/
-env/
-venv/
 
-# Environment variables
-.env
-
-# SQLite database
-data/agpw.db
-
-# Ingest error files
-errors/
-
-# Logs
-*.log
-
-# VS Code
-.vscode/
-!.vscode/settings.jsongitgit
+# --- VS Code ---
+.vscode/*
+!.vscode/settings.json
 !.vscode/launch.json
 
-# Docker
-docker/*.pid
+# --- Logs ---
+logs/
+*.log
 
-# Ruff
-.ruff_cache/
-
-# Pytest
+# --- Test cache ---
 .pytest_cache/
 
-# MyPy
-.mypy_cache/
+# --- Docker ---
+docker/*.log
+docker/tmp/
+docker/data/
 
-# Jupyter (na przyszłość)
-.ipynb_checkpoints/
+# --- Project data ---
+data/agpw.db
+data/incoming/*
+data/incoming/unknown/*
+data/tmp/*
 
-# System files
+# --- Executables (blokują GitHub push) ---
+*.exe
+OllamaSetup.exe
+
+# --- System files ---
 Thumbs.db
 desktop.ini
+
+# --- Misc ---
+uv.lock
+Notatki/
