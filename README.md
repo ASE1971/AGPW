@@ -29,89 +29,113 @@ AGPW to projekt łączący ingest danych giełdowych z GPW, lokalną analizę, k
 ## Uruchamianie lokalne
 
 ### Wymagania
-- Python 3.11+
+- Python 3.14+
 - pip
-- zależności z `requirements.txt` (pandas, openpyxl, xlrd, FastAPI, Uvicorn)
+- zależności z `requirements.txt` (pandas, openpyxl, xlrd, FastAPI, Uvicorn, pytest)
 
 ### Instalacja
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # lub .venv\Scripts\Activate.ps1 na Windows
 pip install -r requirements.txt
-Uruchomienie API
-bash
+```
+
+### Uruchomienie API
+```bash
 uvicorn api.server:app --host 0.0.0.0 --port 8000
-Uruchamianie z Dockerem
-bash
+```
+
+### Uruchamianie z Dockerem
+```bash
 docker build -f docker/Dockerfile -t agpw .
 docker run -p 8000:8000 agpw
-Ingest plików Excel
-Pliki wrzucane do data/incoming/ są automatycznie przetwarzane:
+```
 
-klasyfikacja typu pliku
+### Ingest plików Excel
 
-walidacja danych
+Pliki wrzucane do `data/incoming/` są automatycznie przetwarzane:
 
-zapis do SQLite
+1. Klasyfikacja typu pliku
+2. Walidacja danych
+3. Zapis do SQLite
+4. Przenoszenie plików (UNKNOWN → `data/unknown/`, poprawne → `data/loaded/`)
+5. Usuwanie plików po imporcie
 
-przenoszenie plików UNKNOWN
+**Obsługiwane typy plików:**
 
-usuwanie plików po imporcie
+| Typ | Wymagane kolumny |
+|-----|-----------------|
+| STOCK_DAILY | `isin`, `date` (+ Open, High, Low, Close) |
+| INDEX_DAILY | `date` (+ Open, High, Low, Close, nazwa) |
+| TICKER_MAP | `ticker`, `name` |
+| SECTOR_COMPOSITION | `sector`, `ticker` |
+| SECTOR_INDEX_MAP | `sector`, `index_name` |
 
-Uruchomienie ingestu:
+**Uruchomienie ingestu:**
+```bash
+python -m agent.ingest.run_ingest --dir data/incoming
+```
 
-bash
-python -m agent.ingest.run_ingest -d data/incoming
-Testy
-bash
-pytest -q
-Struktura projektu
-api/ — aplikacja FastAPI
+## Testy
 
-agent/ingest/ — logika ingestu i klasyfikacji
+Projekt zawiera 6 testów automatycznych pokrywających:
+- odczyt plików Excel
+- klasyfikację plików
+- ingest danych
+- obsługę nieznanych plików
+- health endpoint API
 
-data/ — baza SQLite + pliki wejściowe
+Uruchomienie testów:
+```bash
+python -m pytest -v
+```
 
-docker/ — Dockerfile i konfiguracja
+Wynik: ✅ Wszystkie 6 testów przechodzi
 
-tests/ — testy automatyczne
+## Struktura projektu
 
-.github/workflows/ — CI/CD
+```
+.
+├── api/                      # FastAPI aplikacja
+├── agent/ingest/             # Logika ingestu i klasyfikacji
+├── data/                     # Baza SQLite + pliki wejściowe
+│   ├── agpw.db
+│   ├── incoming/
+│   ├── loaded/
+│   └── unknown/
+├── docker/                   # Dockerfile i konfiguracja
+├── tests/                    # Testy automatyczne
+├── scripts/                  # Skrypty pomocnicze
+├── .github/workflows/        # CI/CD
+└── requirements.txt          # Zależności Python
+```
 
-Rekomendacje dalszego rozwoju
-data/db.py – definicja tabel SQLite
+**Kluczowe moduły:**
+- `data/db.py` — schemat i operacje na SQLite
+- `agent/ingest/file_router.py` — główny orkestrator ingestu
+- `agent/ingest/file_llm_classifier.py` — klasyfikacja plików
+- `agent/ingest/ingest_stocks_daily.py` — ingest danych akcji
+- `agent/ingest/ingest_indexes_daily.py` — ingest danych indeksów
 
-rozbudowa ingest (LLM, walidacja, logowanie)
+## Rekomendacje dalszego rozwoju
 
-pipeline multi-agentowy (ingest → validate → analyze → anomalies → scoring → report)
+- ✅ Testy automatyczne (6/6 testów przechodzi)
+- ⏳ Rozbudowa LLM — integracja z API do klasyfikacji plików
+- ⏳ Walidacja danych — bardziej zaawansowana walidacja Excel
+- ⏳ Pipeline multi-agentowy: ingest → validate → analyze → anomalies → scoring → report
+- ⏳ Nowe endpointy API: `/api/chat`, `/api/fetch/eod`, `/api/score/{ticker}`
+- ⏳ Narzędzia: ruff, mypy, bandit, deployment automation
+- ⏳ Obsługa więcej formatów danych (CSV, JSON)
+- ⏳ Monitoring i logging
 
-nowe endpointy API (/api/chat, /api/fetch/eod, /api/score/{ticker})
+## CI/CD
 
-rozbudowa CI/CD (ruff, mypy, bandit, deploy)
+Projekt wykorzystuje GitHub Actions do:
+- Uruchamiania testów na każde push/PR
+- Budowania obrazu Dockera
+- Publikacji do GitHub Container Registry
+- Walidacji kodu (pylint, type checking)
 
-testy jednostkowe i integracyjne
+---
 
-walidacja bezpieczeństwa importu Excel
-
-Plan działania
-[ ] data/db.py – schemat SQLite
-
-[ ] parser Excel w agent/ingest/
-
-[ ] klasyfikator LLM (file_llm_classifier.py)
-
-[ ] pipeline (agent/worker.py)
-
-[ ] endpointy API
-
-[ ] docker-compose z ollama + worker + db_volume
-
-[ ] CI (lint, mypy, pytest, bandit)
-
-[ ] CD (push do registry + deploy)
-
-[ ] testy ingest/pipeline/API
-
-[ ] walidacja importu Excel
-
-Repozytorium zostało oczyszczone po rewrite historii (13.08.2026). Pliki wykonywalne (*.exe) są ignorowane w .gitignore.
+**Status:** ✅ Projekt w aktywnym rozwoju. Ostatnia aktualizacja: 2026-08-17
