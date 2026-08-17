@@ -29,8 +29,8 @@ def test_ingest_moves_loaded_and_unknown():
     stock_file = incoming / "stock.xlsx"
     write_excel(
         stock_file,
-        ["Date", "Open", "High", "Low", "Close", "Volume"],
-        {"Date": "2024-01-01", "Open": 1, "High": 2, "Low": 0.5, "Close": 1.5, "Volume": 1000}
+        ["ISIN", "Date", "Open", "High", "Low", "Close", "Volume"],
+        {"ISIN": "PLAAA0000001", "Date": "2024-01-01", "Open": 1, "High": 2, "Low": 0.5, "Close": 1.5, "Volume": 1000}
     )
 
     # 2) Plik UNKNOWN

@@ -23,9 +23,9 @@ def test_real_file_ingest(tmp_path, monkeypatch):
 
     # Wymuszenie klasyfikacji jako stocks_daily
     monkeypatch.setattr(
-        file_llm_classifier,
+        file_router,
         "classify_file",
-        lambda _: "stocks_daily",
+        lambda _, __: "STOCK_DAILY",
     )
 
     # Użycie tymczasowej bazy
