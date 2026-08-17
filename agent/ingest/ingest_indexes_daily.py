@@ -1,53 +1,60 @@
-import logging
 from pathlib import Path
-from typing import Iterable
+import pandas as pd
+import logging
 
-from data.db import connect_db
+from data.db import insert_index_daily
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_COLUMNS = ["index_name", "date", "open", "high", "low", "close"]
+# Mapowanie polskich nazw GPW → standardowe nazwy
+COLMAP = {
+    "data": "date",
+    "nazwa": "index_name",
+    "kurs otwarcia": "open",
+    "kurs max": "high",
+    "kurs min": "low",
+    "kurs zamknięcia": "close",
+    "kurs zamkniecia": "close",
+    "wolumen": "volume",
+    "liczba transakcji": "transactions",
+    "obrót": "turnover",
+}
+
+REQUIRED = {"date", "index_name", "open", "high", "low", "close"}
 
 
-def validate_columns(columns: Iterable[str]) -> None:
-    lower_cols = {col.strip().lower() for col in columns}
-    missing = [col for col in REQUIRED_COLUMNS if col not in lower_cols]
+def ingest_indexes_daily(df: pd.DataFrame, path: Path) -> int:
+    """
+    Ingest GPW INDEX_DAILY file into SQLite.
+    Returns number of inserted rows.
+    """
+
+    # --- Normalizacja nazw kolumn ---
+    df = df.rename(columns=lambda c: COLMAP.get(str(c).lower(), str(c).lower()))
+
+    # --- Walidacja wymaganych kolumn ---
+    missing = REQUIRED - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns for indexes_daily: {missing}")
 
+    # --- Wybór tylko wymaganych kolumn ---
+    df = df[list(REQUIRED)]
 
-def ingest_indexes_daily(df, source: Path) -> int:
-    validate_columns(df.columns)
-    rows = []
-    for raw_row in df.to_dict(orient="records"):
-        row = {k.strip().lower(): v for k, v in raw_row.items()}
-        rows.append(
-            (
-                row.get("index_name"),
-                row.get("date"),
-                row.get("open"),
-                row.get("high"),
-                row.get("low"),
-                row.get("close"),
-                row.get("change_pct"),
-                row.get("turnover"),
-                row.get("currency"),
-            )
+    # --- Konwersje typów ---
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    # --- Wstawianie do bazy ---
+    count = 0
+    for _, row in df.iterrows():
+        insert_index_daily(
+            index_name=row["index_name"],
+            date=row["date"],
+            open=row["open"],
+            high=row["high"],
+            low=row["low"],
+            close=row["close"],
         )
+        count += 1
 
-    if not rows:
-        raise ValueError("No rows found in indexes_daily file")
-
-    logger.info("Ingesting %d rows from %s", len(rows), source.name)
-    with connect_db() as conn:
-        cursor = conn.cursor()
-        cursor.executemany(
-            """
-            INSERT INTO indexes_daily
-                (index_name, date, open, high, low, close, change_pct, turnover, currency)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            rows,
-        )
-        conn.commit()
-    return len(rows)
+    logger.info("Inserted %d INDEX_DAILY rows from %s", count, path.name)
+    return count

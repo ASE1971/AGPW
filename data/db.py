@@ -95,6 +95,7 @@ def create_tables(connection: sqlite3.Connection) -> None:
     cursor = connection.cursor()
     for statement in CREATE_TABLES_SQL:
         cursor.execute(statement)
+
     # Ensure `stocks_daily` has expected columns; add missing columns via ALTER TABLE.
     expected_cols = {
         "name": "TEXT",
@@ -138,6 +139,45 @@ def initialize_database(path: Path | str = DB_PATH) -> Path:
     with connect_db(path) as connection:
         create_tables(connection)
     return path
+
+
+# ---------------------------------------------------------------------------
+#  INSERT FUNCTIONS
+# ---------------------------------------------------------------------------
+
+def insert_index_daily(
+    index_name: str,
+    date,
+    open: float | None,
+    high: float | None,
+    low: float | None,
+    close: float | None,
+    change_pct: float | None = None,
+    turnover: float | None = None,
+    currency: str | None = None,
+    path: Path | str | None = None,
+):
+    """Insert one INDEX_DAILY row into SQLite."""
+    with connect_db(path) as conn:
+        conn.execute(
+            """
+            INSERT INTO indexes_daily (
+                index_name, date, open, high, low, close, change_pct, turnover, currency
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                index_name,
+                date,
+                open,
+                high,
+                low,
+                close,
+                change_pct,
+                turnover,
+                currency,
+            ),
+        )
+        conn.commit()
 
 
 if __name__ == "__main__":

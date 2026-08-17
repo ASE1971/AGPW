@@ -17,25 +17,29 @@ def _heuristic_classify(df) -> FileType:
     """Fallback heuristics when LLM fails or is uncertain."""
     lower_cols = {str(col).strip().lower() for col in df.columns}
 
-    # GPW STOCK DAILY (polskie nazwy)
+    # --- GPW STOCK DAILY ---
+    # ISIN + Kurs zamknięcia → zawsze akcje
     if "isin" in lower_cols and (
         "kurs zamknięcia" in lower_cols or "kurs zamkniecia" in lower_cols
     ):
         return "STOCK_DAILY"
 
-    # GPW INDEX DAILY (polskie nazwy indeksów)
+    # --- GPW INDEX DAILY ---
+    # Nazwa + Kurs zamknięcia → indeks
     if "nazwa" in lower_cols and (
         "kurs zamknięcia" in lower_cols or "kurs zamkniecia" in lower_cols
     ):
         return "INDEX_DAILY"
 
-    # English-based formats
-    if {"ticker", "open", "high", "low", "close"}.issubset(lower_cols):
+    # --- English STOCK_DAILY ---
+    if {"date", "open", "high", "low", "close", "volume"}.issubset(lower_cols):
         return "STOCK_DAILY"
 
-    if {"index_name", "open", "high", "low", "close"}.issubset(lower_cols):
+    # --- English INDEX_DAILY ---
+    if {"date", "open", "high", "low", "close"}.issubset(lower_cols):
         return "INDEX_DAILY"
 
+    # --- Other formats ---
     if {"ticker", "name"}.issubset(lower_cols):
         return "TICKER_MAP"
 
@@ -51,6 +55,12 @@ def _heuristic_classify(df) -> FileType:
 def classify_file(path: Path, df) -> FileType:
     """Classify an Excel file using local LLM (Phi-3) with heuristic fallback."""
 
+    # --- 1. Heurystyka ma pierwszeństwo ---
+    heuristic = _heuristic_classify(df)
+    if heuristic != "UNKNOWN":
+        return heuristic
+
+    # --- 2. Dopiero potem LLM ---
     cols = list(df.columns)
     sample = df.head(5).to_dict(orient="records")
 
@@ -95,5 +105,5 @@ def classify_file(path: Path, df) -> FileType:
     except Exception:
         pass
 
-    # fallback heuristics
+    # --- 3. fallback heurystyka ---
     return _heuristic_classify(df)
