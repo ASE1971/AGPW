@@ -18,6 +18,27 @@ def calculate_sma(prices: pd.Series, window: int = 20) -> pd.Series:
     return prices.rolling(window=window).mean()
 
 
+# ============================
+# PREDEFINED SMA SHORTCUTS
+# ============================
+
+def sma12(prices: pd.Series) -> pd.Series:
+    """SMA 12 — short-term trend indicator."""
+    return calculate_sma(prices, window=12)
+
+def sma26(prices: pd.Series) -> pd.Series:
+    """SMA 26 — medium-term trend indicator."""
+    return calculate_sma(prices, window=26)
+
+def sma50(prices: pd.Series) -> pd.Series:
+    """SMA 50 — mid-term trend indicator."""
+    return calculate_sma(prices, window=50)
+
+def sma200(prices: pd.Series) -> pd.Series:
+    """SMA 200 — long-term trend indicator."""
+    return calculate_sma(prices, window=200)
+
+
 def calculate_ema(prices: pd.Series, window: int = 20, adjust: bool = False) -> pd.Series:
     """
     Calculate Exponential Moving Average (EMA).
@@ -31,6 +52,28 @@ def calculate_ema(prices: pd.Series, window: int = 20, adjust: bool = False) -> 
         Series of EMA values
     """
     return prices.ewm(span=window, adjust=adjust).mean()
+
+
+# ============================
+# PREDEFINED EMA SHORTCUTS
+# ============================
+
+def ema12(prices: pd.Series) -> pd.Series:
+    """EMA 12 — short-term trend indicator."""
+    return calculate_ema(prices, window=12)
+
+def ema26(prices: pd.Series) -> pd.Series:
+    """EMA 26 — used in MACD."""
+    return calculate_ema(prices, window=26)
+
+def ema50(prices: pd.Series) -> pd.Series:
+    """EMA 50 — medium-term trend indicator."""
+    return calculate_ema(prices, window=50)
+
+def ema200(prices: pd.Series) -> pd.Series:
+    """EMA 200 — long-term trend indicator."""
+    return calculate_ema(prices, window=200)
+
 
 
 def calculate_macd(
@@ -72,18 +115,14 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
     Returns:
         Series of RSI values (0-100)
     """
-    # Calculate changes
     delta = prices.diff()
     
-    # Separate gains and losses
     gains = delta.where(delta > 0, 0)
     losses = -delta.where(delta < 0, 0)
     
-    # Calculate average gains and losses
     avg_gains = gains.rolling(window=window).mean()
     avg_losses = losses.rolling(window=window).mean()
     
-    # Calculate RS and RSI
     rs = avg_gains / avg_losses
     rsi = 100 - (100 / (1 + rs))
     
@@ -108,14 +147,12 @@ def calculate_atr(
     low = ohlc["low"]
     close = ohlc["close"]
     
-    # Calculate True Range
     tr1 = high - low
     tr2 = (high - close.shift()).abs()
     tr3 = (low - close.shift()).abs()
     
     tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
     
-    # Calculate Average True Range
     atr = tr.rolling(window=window).mean()
     
     return atr
@@ -157,7 +194,6 @@ def calculate_obv(prices: pd.Series, volume: pd.Series) -> pd.Series:
     Returns:
         Series of OBV values
     """
-    # Determine price direction
     obv = pd.Series(0.0, index=prices.index)
     
     for i in range(1, len(prices)):
@@ -191,18 +227,12 @@ def calculate_ad(
     close = ohlc["close"]
     volume = ohlc["volume"]
     
-    # Calculate Money Flow Multiplier (MFM)
-    # MFM = ((Close - Low) - (High - Close)) / (High - Low)
-    # Handle case where High == Low to avoid division by zero
     high_low_diff = high - low
     high_low_diff = high_low_diff.replace(0, 1)  # Avoid division by zero
     
     mfm = ((close - low) - (high - close)) / high_low_diff
-    
-    # Calculate Money Flow Volume (MFV)
     mfv = mfm * volume
     
-    # Calculate cumulative A/D line
     ad = mfv.cumsum()
     
     return ad
